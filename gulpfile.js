@@ -1,0 +1,55 @@
+/*jshint globalstrict: true*/
+/*global require*/
+
+'use strict'
+
+const gulp = require('gulp')
+const util = require('util')
+const jdists = require('gulp-jdists')
+const rename = require('gulp-rename')
+const examplejs = require('gulp-examplejs')
+const typescript = require('gulp-typescript')
+const merge2 = require('merge2')
+
+gulp.task('build', function () {
+  var tsResult = gulp.src(`src/index.ts`)
+    .pipe(jdists())
+    .pipe(gulp.dest('lib'))
+    .pipe(typescript({
+      target: 'es2015',
+      module: 'commonjs',
+      declaration: true,
+    }))
+
+  return merge2([
+    tsResult.dts.pipe(gulp.dest('./lib')),
+    tsResult.js.pipe(gulp.dest('./lib'))
+  ])
+})
+
+gulp.task('example', function () {
+  return gulp.src([
+    'src/*.ts'
+  ])
+    .pipe(examplejs({
+      header: `
+const http = require('http')
+let server = http.createServer(function (req, res) {
+  res.write(JSON.stringify({
+    header: req.headers,
+    method: req.method,
+    url: req.url,
+  }))
+  res.end()
+}).listen(18081)
+
+global.processor = require('../')
+      `
+    }))
+    .pipe(rename({
+      extname: '.js'
+    }))
+    .pipe(gulp.dest('test'))
+})
+
+gulp.task('dist', ['build', 'example'])
